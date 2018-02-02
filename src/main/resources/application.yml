@@ -1,0 +1,14 @@
+spring:
+    datasource:
+        name: ebus
+        url: jdbc:mysql://localhost:3306/test?autoReconnect=true&useSSL=false
+        username: root
+        password: haha123
+        # 使用druid数据源
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+
+mybatis:
+    type-aliases-package: com.lty.ebus.model
+    #如果不是在Mapper里直接写sql语句，而是在xml里写，需要指定XML文件路径
+    #mapper-locations: classpath:mapping/*.xml
