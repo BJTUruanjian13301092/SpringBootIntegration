@@ -1,8 +1,11 @@
 package com.example.spring_boot_test.controller;
 
+import com.example.spring_boot_test.dao.TestInterface;
 import com.example.spring_boot_test.dao.UserMapper;
 import com.example.spring_boot_test.entity.User;
 import com.example.spring_boot_test.service.RedisTestService;
+import com.example.spring_boot_test.service.StandfordNLPService;
+import com.example.spring_boot_test.service.TestInterfaceService;
 import com.example.spring_boot_test.service.TestLibSVM;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -26,6 +29,15 @@ public class TestController {
 
     @Autowired
     RedisTestService redisTestService;
+
+//    @Autowired
+//    TestInterfaceService testInterfaceService;
+
+    @Autowired
+    TestInterface testInterface;
+
+    @Autowired
+    StandfordNLPService standfordNLPService;
 
     /**
      * 使用Mybatis增删改查
@@ -94,5 +106,19 @@ public class TestController {
     public void testStringRedisTemplate(){
 
         redisTestService.testStringRedisTemplate();
+    }
+
+    //测试Interface
+    @RequestMapping("testInterface")
+    public void testInterface(){
+
+        testInterface.testMyInterface();
+    }
+
+    //测试StandFordNlp
+    @RequestMapping("testnlp")
+    public void testNlp(){
+
+        standfordNLPService.testMyNlp();
     }
 }
