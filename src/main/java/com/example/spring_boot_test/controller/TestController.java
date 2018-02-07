@@ -5,7 +5,6 @@ import com.example.spring_boot_test.dao.UserMapper;
 import com.example.spring_boot_test.entity.User;
 import com.example.spring_boot_test.service.RedisTestService;
 import com.example.spring_boot_test.service.StandfordNLPService;
-import com.example.spring_boot_test.service.TestInterfaceService;
 import com.example.spring_boot_test.service.TestLibSVM;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -29,9 +28,6 @@ public class TestController {
 
     @Autowired
     RedisTestService redisTestService;
-
-//    @Autowired
-//    TestInterfaceService testInterfaceService;
 
     @Autowired
     TestInterface testInterface;

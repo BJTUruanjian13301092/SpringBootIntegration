@@ -1,8 +1,14 @@
 package test;
 
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.get.MultiGetItemResponse;
+import org.elasticsearch.action.get.MultiGetResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
@@ -50,6 +56,10 @@ public class ElasticSearchTest {
     TransportClient client;
 
 
+    /**
+     * 利用TransportClient连接集群，程序主入口
+     * @throws Exception
+     */
     @SuppressWarnings("resource")
     @Test
     public void connectToES() throws Exception {
@@ -65,8 +75,9 @@ public class ElasticSearchTest {
         //createIndex();
         //createIndexByJson();
         //addIndexValue();
-        //getIndex();
+        getIndex();
         //updateIndex();
+        //deleteIndexID();
         //deleteIndex();
 
         //设置查询条件
@@ -148,8 +159,20 @@ public class ElasticSearchTest {
      */
     public void getIndex(){
 
-        GetResponse getResponse = client.prepareGet("library", "book", "1").execute().actionGet();
-        System.out.println(getResponse.getSourceAsString());
+        //Get一个
+//        GetResponse getResponse = client.prepareGet("school", "student", "0").execute().actionGet();
+//        System.out.println(getResponse.getSourceAsString());
+
+        //Get多个
+        MultiGetResponse multiGetResponse = client.prepareMultiGet()
+                .add("school", "student", "0")
+                .add("school", "student", "1").execute().actionGet();
+        MultiGetItemResponse[] itemResponses = multiGetResponse.getResponses();
+        for(MultiGetItemResponse item : itemResponses){
+
+            System.out.println(item.getResponse().getSourceAsString());
+        }
+
     }
 
     /**
@@ -175,11 +198,32 @@ public class ElasticSearchTest {
     }
 
     /**
+     * 删除索引中的一个ID
+     */
+    public void deleteIndexID(){
+
+        //DeleteResponse response = client.prepareDelete("library", "book", "1").get();
+
+        //批量删除,通过add添加
+        BulkRequestBuilder bulkRequest = client.prepareBulk();
+        bulkRequest.add(client.prepareDelete("library", "book", "1"));
+        bulkRequest.execute().actionGet();
+    }
+
+    /**
      * 删除索引
      */
     public void deleteIndex(){
 
-        DeleteResponse response = client.prepareDelete("library", "book", "1").get();
+        //删除索引
+        DeleteIndexResponse dResponse = client.admin().indices().prepareDelete("library").execute().actionGet();
+
+        //判断索引是否存在
+        IndicesExistsRequest inExistsRequest = new IndicesExistsRequest("library");
+
+        IndicesExistsResponse inExistsResponse = client.admin().indices().exists(inExistsRequest).actionGet();
+
+        System.out.println(inExistsResponse.toString());
     }
 
     /**
