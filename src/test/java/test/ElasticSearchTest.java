@@ -102,8 +102,8 @@ public class ElasticSearchTest {
 
         QueryBuilder queryBuilder8 = QueryBuilders.fuzzyQuery("sex", "fe-male");
 
-        String[] fields = {"name"};
-        String[] texts = {"larry"};
+        String[] fields = {"sex"};
+        String[] texts = {"female"};
         QueryBuilder queryBuilder9 = QueryBuilders.moreLikeThisQuery(fields, texts, null).minTermFreq(1).maxQueryTerms(12).minDocFreq(1);
 
 
@@ -135,7 +135,7 @@ public class ElasticSearchTest {
      * @throws IOException
      */
     public void createIndex() throws IOException{
-        
+
     int[] a = {100, 200};
         for(int i=0;i<10;i++){
 
@@ -270,7 +270,7 @@ public class ElasticSearchTest {
         SearchRequestBuilder searchRequest = client.prepareSearch(index).setTypes(type)
                 .setQuery(queryBuilder)
                 .addAggregation(aggregationBuilder)
-                .addSort(sortBuilder)
+                //.addSort(sortBuilder)
                 .setFrom(0)                 //分页技术，设置起始位置
                 .setSize(10000);            //设置（每一页）最大的显示数量，size默认是10
 
