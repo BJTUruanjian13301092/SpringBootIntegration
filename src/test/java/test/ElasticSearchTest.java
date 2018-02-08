@@ -1,8 +1,10 @@
 package test;
 
+import org.apache.lucene.queries.mlt.MoreLikeThisQuery;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.action.admin.indices.validate.query.*;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteResponse;
@@ -12,6 +14,7 @@ import org.elasticsearch.action.get.MultiGetResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -19,9 +22,7 @@ import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.Aggregation;
@@ -31,10 +32,16 @@ import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.avg.AvgAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.avg.InternalAvg;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.sort.SortBuilder;
+
+import org.elasticsearch.search.sort.SortBuilders;
+import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.elasticsearch.search.aggregations.bucket.terms.StringTerms.Bucket;
 import org.junit.Test;
 
+import javax.management.Query;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -75,12 +82,13 @@ public class ElasticSearchTest {
         //createIndex();
         //createIndexByJson();
         //addIndexValue();
-        getIndex();
+        //getIndex();
         //updateIndex();
         //deleteIndexID();
         //deleteIndex();
 
         //设置查询条件
+        QueryBuilder queryBuilder = QueryBuilders.matchAllQuery();
         QueryBuilder queryBuilder1 = QueryBuilders.matchPhraseQuery("sex", "male");
         QueryBuilder queryBuilder2 = QueryBuilders.matchQuery("sex", "male");
         QueryBuilder queryBuilder3 = QueryBuilders.termQuery("sex", "male");
@@ -92,13 +100,34 @@ public class ElasticSearchTest {
         queryBuilder7.must(queryBuilder1);
         queryBuilder7.filter(queryBuilder6);
 
-        //searchIndex(null, queryBuilder7, "school", "student");
+        QueryBuilder queryBuilder8 = QueryBuilders.fuzzyQuery("sex", "fe-male");
 
+        String[] fields = {"name"};
+        String[] texts = {"larry"};
+        QueryBuilder queryBuilder9 = QueryBuilders.moreLikeThisQuery(fields, texts, null).minTermFreq(1).maxQueryTerms(12).minDocFreq(1);
+
+
+        //验证查询语句的正确性
+        ValidateQueryResponse validateQueryResponse = new ValidateQueryRequestBuilder(client, ValidateQueryAction.INSTANCE)
+                .setQuery(queryBuilder9).setExplain(true).get();
+
+        System.out.println("查询结果反馈:");
+        System.out.println("--------------------------------------------------------");
+        for (QueryExplanation qe : validateQueryResponse.getQueryExplanation()) {
+            System.out.println(String.format("索引:%s", qe.getIndex()));
+            System.out.println(String.format("解释:%s", qe.getExplanation()));
+            System.out.println(String.format("错误信息：%s", qe.getError()));
+        }
+
+        //设置聚合条件
         TermsAggregationBuilder aggregationBuilder = AggregationBuilders.terms("aggSex").field("sex.keyword");
         TermsAggregationBuilder ageAgg = AggregationBuilders.terms("aggAge").field("age.keyword");
         aggregationBuilder.subAggregation(ageAgg);
 
-        //searchIndex(aggregationBuilder, QueryBuilders.matchAllQuery(), "school", "student");
+        //设置排序条件
+        SortBuilder sortBuilder = SortBuilders.fieldSort("age.keyword").order(SortOrder.ASC).unmappedType("long");
+
+        searchIndex(sortBuilder, aggregationBuilder, queryBuilder9, "school", "student");
     }
 
     /**
@@ -106,15 +135,20 @@ public class ElasticSearchTest {
      * @throws IOException
      */
     public void createIndex() throws IOException{
+    int[] a = {100, 200};
+        for(int i=0;i<10;i++){
 
-        IndexResponse response = client.prepareIndex("library", "book", "1")
-                .setSource(jsonBuilder().
-                        startObject()
-                        .field("book_name", "ElasticSearch入门")
-                        .field("author", "Kobe")
-                        .field("publish_time", "2017-09-09")
-                        .endObject())
-                .get();
+            IndexResponse response = client.prepareIndex("library", "book", String.valueOf(i))
+                    .setSource(jsonBuilder().
+                            startObject()
+                            .field("book_name", "ElasticSearch入门")
+                            .field("author", "Kobe")
+                            .field("publish_time", "2017-09-09")
+                            .field("describe", "This book is not a good one so do not buy it")
+                            .field("price", a)
+                            .endObject())
+                    .get();
+        }
     }
 
     /**
@@ -159,7 +193,7 @@ public class ElasticSearchTest {
      */
     public void getIndex(){
 
-        //Get一个
+//        //Get一个
 //        GetResponse getResponse = client.prepareGet("school", "student", "0").execute().actionGet();
 //        System.out.println(getResponse.getSourceAsString());
 
@@ -229,13 +263,18 @@ public class ElasticSearchTest {
     /**
      * 搜索方法
      */
-    public void searchIndex(TermsAggregationBuilder aggregationBuilder, QueryBuilder queryBuilder, String index, String type){
+    public void searchIndex(SortBuilder sortBuilder, TermsAggregationBuilder aggregationBuilder, QueryBuilder queryBuilder, String index, String type){
 
-        SearchResponse searchResponse = client.prepareSearch(index).setTypes(type)
+        SearchRequestBuilder searchRequest = client.prepareSearch(index).setTypes(type)
                 .setQuery(queryBuilder)
                 .addAggregation(aggregationBuilder)
-                .execute()
-                .actionGet();
+                .addSort(sortBuilder)
+                .setFrom(0)                 //分页技术，设置起始位置
+                .setSize(10000);            //设置（每一页）最大的显示数量，size默认是10
+
+        System.out.println("SearchRequest is: ");
+        System.out.println(searchRequest.toString());
+        SearchResponse searchResponse = searchRequest.execute().actionGet();
 
         //Search区块
         SearchHits hits = searchResponse.getHits();
@@ -249,10 +288,13 @@ public class ElasticSearchTest {
                 String sex = (String)hit.getSource().get("sex");
                 String name = (String)hit.getSource().get("name");
                 String age = (String)hit.getSource().get("age");
+                float score = hit.getScore();
 
-                System.out.println("id = " + id + " name = " + name + " sex = " + sex + " age = " + age);
+                System.out.println("id = " + id + " name = " + name + " sex = " + sex + " age = " + age + " score = " + score);
             }
         }
+
+        System.out.println("--------------------------------------------------------");
 
         //Aggregation区块
         Map<String, Aggregation> aggMap = searchResponse.getAggregations().asMap();
@@ -278,6 +320,5 @@ public class ElasticSearchTest {
             System.out.print("\n\n");
         }
     }
-
 
 }
