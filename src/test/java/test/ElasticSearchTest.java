@@ -236,6 +236,7 @@ public class ElasticSearchTest {
      */
     public void deleteIndexID(){
 
+        //删除一个
         //DeleteResponse response = client.prepareDelete("library", "book", "1").get();
 
         //批量删除,通过add添加
