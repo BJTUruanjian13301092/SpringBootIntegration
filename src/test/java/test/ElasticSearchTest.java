@@ -173,7 +173,6 @@ public class ElasticSearchTest {
         }
 
         bulkRequest.execute().actionGet();
-
     }
 
     /**
