@@ -135,6 +135,7 @@ public class ElasticSearchTest {
      * @throws IOException
      */
     public void createIndex() throws IOException{
+        
     int[] a = {100, 200};
         for(int i=0;i<10;i++){
 
