@@ -20,9 +20,13 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.lucene.search.FilteredCollector;
+import org.elasticsearch.common.lucene.search.function.FieldValueFactorFunction;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.index.query.*;
+import org.elasticsearch.index.query.functionscore.FieldValueFactorFunctionBuilder;
+import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.Aggregation;
@@ -97,8 +101,8 @@ public class ElasticSearchTest {
         QueryBuilder queryBuilder6 = QueryBuilders.rangeQuery("age").from("22").to("23");
 
         BoolQueryBuilder queryBuilder7 = QueryBuilders.boolQuery();
-        queryBuilder7.must(queryBuilder1);
-        queryBuilder7.filter(queryBuilder6);
+        queryBuilder7.should(queryBuilder1);
+        queryBuilder7.should(queryBuilder6);
 
         QueryBuilder queryBuilder8 = QueryBuilders.fuzzyQuery("sex", "fe-male");
 
@@ -106,6 +110,17 @@ public class ElasticSearchTest {
         String[] texts = {"female"};
         QueryBuilder queryBuilder9 = QueryBuilders.moreLikeThisQuery(fields, texts, null).minTermFreq(1).maxQueryTerms(12).minDocFreq(1);
 
+        ConstantScoreQueryBuilder queryBuilder10 = QueryBuilders.constantScoreQuery(queryBuilder1);
+
+        DisMaxQueryBuilder queryBuilder11 = QueryBuilders.disMaxQuery();
+        queryBuilder11.add(queryBuilder3);
+        queryBuilder11.add(queryBuilder6);
+
+        //Positive, Negative
+        BoostingQueryBuilder queryBuilder12 = QueryBuilders.boostingQuery(queryBuilder5, queryBuilder4).negativeBoost(0.5f);
+
+        FieldValueFactorFunctionBuilder fieldValueFactorFunctionBuilder = new FieldValueFactorFunctionBuilder("age.keyword");
+        FunctionScoreQueryBuilder queryBuilder13 = QueryBuilders.functionScoreQuery(queryBuilder2, fieldValueFactorFunctionBuilder);
 
         //验证查询语句的正确性
         ValidateQueryResponse validateQueryResponse = new ValidateQueryRequestBuilder(client, ValidateQueryAction.INSTANCE)
@@ -127,7 +142,7 @@ public class ElasticSearchTest {
         //设置排序条件
         SortBuilder sortBuilder = SortBuilders.fieldSort("age.keyword").order(SortOrder.ASC).unmappedType("long");
 
-        searchIndex(sortBuilder, aggregationBuilder, queryBuilder9, "school", "student");
+        searchIndex(sortBuilder, aggregationBuilder, queryBuilder13, "school", "student");
     }
 
     /**
@@ -173,6 +188,7 @@ public class ElasticSearchTest {
         }
 
         bulkRequest.execute().actionGet();
+
     }
 
     /**
@@ -182,9 +198,9 @@ public class ElasticSearchTest {
     public void addIndexValue() throws IOException{
 
         BulkRequestBuilder bulkRequest = client.prepareBulk();
-        String json1 = "{\"name\":\"mandy\", \"sex\":\"female\", \"age\":\"18\"}";
+        String json1 = "{\"name\":\"frank\", \"sex\":\"unknown male female\", \"age\":\"90\"}";
 
-        bulkRequest.add(client.prepareIndex("school", "student", "4").setSource(json1));
+        bulkRequest.add(client.prepareIndex("school", "student", "11").setSource(json1));
         bulkRequest.execute().actionGet();
     }
 
@@ -271,7 +287,8 @@ public class ElasticSearchTest {
                 .addAggregation(aggregationBuilder)
                 //.addSort(sortBuilder)
                 .setFrom(0)                 //分页技术，设置起始位置
-                .setSize(10000);            //设置（每一页）最大的显示数量，size默认是10
+                .setSize(100)               //设置（每一页）最大的显示数量，size默认是10
+                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
 
         System.out.println("SearchRequest is: ");
         System.out.println(searchRequest.toString());
@@ -290,7 +307,7 @@ public class ElasticSearchTest {
                 String name = (String)hit.getSource().get("name");
                 String age = (String)hit.getSource().get("age");
                 float score = hit.getScore();
-
+                System.out.println(hit.getSourceAsString());
                 System.out.println("id = " + id + " name = " + name + " sex = " + sex + " age = " + age + " score = " + score);
             }
         }
