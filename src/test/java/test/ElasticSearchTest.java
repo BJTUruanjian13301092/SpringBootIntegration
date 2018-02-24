@@ -1,9 +1,11 @@
 package test;
 
 import org.apache.lucene.queries.mlt.MoreLikeThisQuery;
+import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.elasticsearch.action.admin.indices.validate.query.*;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -19,11 +21,13 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.action.update.UpdateRequest;
+import org.elasticsearch.client.Requests;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.lucene.search.FilteredCollector;
 import org.elasticsearch.common.lucene.search.function.FieldValueFactorFunction;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.query.functionscore.FieldValueFactorFunctionBuilder;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
@@ -32,6 +36,7 @@ import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.avg.AvgAggregationBuilder;
@@ -83,6 +88,8 @@ public class ElasticSearchTest {
 
         //增删改查操作
 
+        //createMapping();
+        //alterMapping();
         //createIndex();
         //createIndexByJson();
         //addIndexValue();
@@ -135,14 +142,14 @@ public class ElasticSearchTest {
         }
 
         //设置聚合条件
-        TermsAggregationBuilder aggregationBuilder = AggregationBuilders.terms("aggSex").field("sex.keyword");
+        TermsAggregationBuilder aggregationBuilder = AggregationBuilders.terms("aggSex").field("sex");
         TermsAggregationBuilder ageAgg = AggregationBuilders.terms("aggAge").field("age.keyword");
         aggregationBuilder.subAggregation(ageAgg);
 
         //设置排序条件
         SortBuilder sortBuilder = SortBuilders.fieldSort("age.keyword").order(SortOrder.ASC).unmappedType("long");
 
-        searchIndex(sortBuilder, aggregationBuilder, queryBuilder13, "school", "student");
+        searchIndex(sortBuilder, aggregationBuilder, queryBuilder1, "school", "student");
     }
 
     /**
@@ -171,12 +178,12 @@ public class ElasticSearchTest {
      * 通过Json创建索引(利用BulkRequestBuilder进行批量操作)
      * @throws IOException
      */
-    public void createIndexByJson() throws Exception{
+    public void createIndexByJson() throws Exception {
 
         BulkRequestBuilder bulkRequest = client.prepareBulk();
 
-        String json1 = "{\"name\":\"larry\", \"sex\":\"male\", \"age\":\"23\"}";
-        String json2 = "{\"name\":\"euphie\", \"sex\":\"female\", \"age\":\"22\"}";
+        String json1 = "{\"name\":\"BBC\", \"channel\":\"1\", \"context\":\"中国驻洛杉矶领事馆遭亚裔男子枪击 嫌犯已自首\"}";
+        String json2 = "{\"name\":\"CCTV\", \"channel\":\"2\", \"context\":\"中韩渔警冲突调查：韩警平均每天扣1艘中国渔船\"}";
         List<String> listJson = new ArrayList<>();
         listJson.add(json1);
         listJson.add(json2);
@@ -184,10 +191,36 @@ public class ElasticSearchTest {
         for(int j=0;j<listJson.size();j++){
             //requestBuilder.setSource(listJson.get(j)).execute().actionGet();
             String id = String.valueOf(j);
-            bulkRequest.add(client.prepareIndex("school", "student", id).setSource(listJson.get(j)));
+            bulkRequest.add(client.prepareIndex("testmapping", "testmapping", id).setSource(listJson.get(j))
+            );
         }
 
         bulkRequest.execute().actionGet();
+
+    }
+
+    /**
+     * 创建映射
+     * @throws IOException
+     */
+    public void createMapping() throws Exception {
+        //先创建索引
+        CreateIndexRequest request = new CreateIndexRequest("mymapping");
+        client.admin().indices().create(request).actionGet();
+        //创建mapping
+        PutMappingRequest mapping = Requests.putMappingRequest("mymapping").type("mymapping").source(getMapping("context", "ik_max_word"));
+        client.admin().indices().putMapping(mapping).actionGet();
+
+    }
+
+    /**
+     * 更新映射
+     * @throws IOException
+     */
+    public void alterMapping() throws Exception {
+        //创建mapping
+        PutMappingRequest mapping = Requests.putMappingRequest("library").type("book").source(getMapping("describe", "true"));
+        client.admin().indices().putMapping(mapping).actionGet();
 
     }
 
@@ -202,6 +235,25 @@ public class ElasticSearchTest {
 
         bulkRequest.add(client.prepareIndex("school", "student", "11").setSource(json1));
         bulkRequest.execute().actionGet();
+    }
+
+    /**
+     * 创建索引的映射列表
+     * @throws IOException
+     */
+    public XContentBuilder getMapping(String indexField, String var) throws IOException {
+        XContentBuilder mapping = null;
+        mapping = jsonBuilder()
+                .startObject()
+                .startObject("properties")
+                .startObject(indexField)
+                .field("type","text")
+                .field("fielddata", var)
+                .endObject()
+                .endObject()
+                .endObject();
+
+        return mapping;
     }
 
     /**
