@@ -3,6 +3,7 @@ package com.example.spring_boot_test.controller;
 import com.example.spring_boot_test.dao.TestInterface;
 import com.example.spring_boot_test.dao.UserMapper;
 import com.example.spring_boot_test.entity.User;
+import com.example.spring_boot_test.service.LoadConfigService;
 import com.example.spring_boot_test.service.RedisTestService;
 import com.example.spring_boot_test.service.StandfordNLPService;
 import com.example.spring_boot_test.service.TestLibSVM;
@@ -34,6 +35,9 @@ public class TestController {
 
     @Autowired
     StandfordNLPService standfordNLPService;
+
+    @Autowired
+    LoadConfigService loadConfigService;
 
     /**
      * 使用Mybatis增删改查
@@ -116,5 +120,15 @@ public class TestController {
     public void testNlp(){
 
         standfordNLPService.testMyNlp();
+    }
+
+    @RequestMapping("testconfig")
+    public void testConfig(){
+        loadConfigService.loadConfig();
+    }
+
+    @RequestMapping("testconfig2")
+    public void testConfig2(){
+        loadConfigService.loadConfig2();
     }
 }
