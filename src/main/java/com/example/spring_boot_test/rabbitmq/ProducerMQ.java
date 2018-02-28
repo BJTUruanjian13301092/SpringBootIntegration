@@ -116,6 +116,7 @@ public class ProducerMQ {
         Connection connection = factory.newConnection();
         Channel channel = connection.createChannel();
 
+        //先把消息放到delay_queue中，过期后自动转入exchange:amq.direct, routing-key:message_ttl_routingKey 的队列中
         HashMap<String, Object> arguments = new HashMap<>();
         arguments.put("x-dead-letter-exchange", "amq.direct");
         arguments.put("x-dead-letter-routing-key", "message_ttl_routingKey");
