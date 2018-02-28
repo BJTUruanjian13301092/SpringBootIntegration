@@ -135,7 +135,6 @@ public class ProducerMQ {
         // routingKey =delay_key 进行转发
         channel.basicPublish("", "delay_queue", properties, message.getBytes());
         System.out.println("sent message: " + message + " ,date:" + System.currentTimeMillis());
-
     }
 
     public static void main(String[] argv) throws Exception {
