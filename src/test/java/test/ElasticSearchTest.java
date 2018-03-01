@@ -31,6 +31,8 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.query.functionscore.FieldValueFactorFunctionBuilder;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
+import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilder;
+import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.Aggregation;
@@ -99,35 +101,109 @@ public class ElasticSearchTest {
         //deleteIndex();
 
         //设置查询条件
+        /**
+         * matchAllQuery : 查询所有
+         */
         QueryBuilder queryBuilder = QueryBuilders.matchAllQuery();
+
+        /**
+         * matPhraseQuery : 多字段匹配，要求字段先后顺序
+         * 参数1 slop : 数字, 该参数控制词条相隔多远仍然能将文档视为匹配, 也就是为了让查询和文档匹配你需要移动词条多少次, 例如为了让quick fox匹配quick brown fox, 需要slop=1, 也就是挪动fox一次
+         */
         QueryBuilder queryBuilder1 = QueryBuilders.matchPhraseQuery("sex", "male");
+
+        /**
+         * matchQuery : 多字段匹配
+         * 参数1 Operator : AND, OR; 方法默认值为OR; AND让所有词项都必须匹配
+         * 参数2 Minimum_should_match : 数字 百分比; 例如 75%, 意味着需要最少匹配查询词汇中的百分之75
+         */
         QueryBuilder queryBuilder2 = QueryBuilders.matchQuery("sex", "male");
+
+        /**
+         * termQuery : 单字段匹配
+         */
         QueryBuilder queryBuilder3 = QueryBuilders.termQuery("sex", "male");
+
+        /**
+         * prefixQuery : 前缀匹配
+         */
         QueryBuilder queryBuilder4 = QueryBuilders.prefixQuery("sex", "fe");
+
+        /**
+         * wildcardQuery : 通配符匹配
+         * 同理还有regexpQuery,处理更为复杂的正则表达式
+         */
         QueryBuilder queryBuilder5 = QueryBuilders.wildcardQuery("sex", "*male");
+
+        /**
+         * rangeQuery : 范围查询
+         */
         QueryBuilder queryBuilder6 = QueryBuilders.rangeQuery("age").from("22").to("23");
 
+        /**
+         * boolQuery : 组合查询
+         * must : 必须包含该条件
+         * must_not : 必须不包含该条件
+         * should : 不必须包含该条件，但是包含了该条件的话评分结果会更高,当boolQuery没有must时，至少匹配一个should条件
+         * 参数1 Minimum_should_match : 数字 百分比; 针对should而言, 至少满足多少条should语句, 例如 : 2
+         * 参数2 Boost : 数字; 例如 3; 控制某一查询语句的相对权重, 默认值为1, 大于1会提升一个查询语句的相对权重; 注意, boost对于权重的提升不是线性的,会经过归一化处理, 0-15之间
+         */
         BoolQueryBuilder queryBuilder7 = QueryBuilders.boolQuery();
         queryBuilder7.should(queryBuilder1);
         queryBuilder7.should(queryBuilder6);
 
+        /**
+         * fuzzyQuery : 模糊查询
+         */
         QueryBuilder queryBuilder8 = QueryBuilders.fuzzyQuery("sex", "fe-male");
 
+        /**
+         * moreLikeThisQuery : 相似查询 //TODO
+         */
         String[] fields = {"sex"};
         String[] texts = {"female"};
         QueryBuilder queryBuilder9 = QueryBuilders.moreLikeThisQuery(fields, texts, null).minTermFreq(1).maxQueryTerms(12).minDocFreq(1);
 
+        /**
+         * constantScoreQuery : 将打分设成常量查询, 取消TF-IDF计算, 提升效率
+         */
         ConstantScoreQueryBuilder queryBuilder10 = QueryBuilders.constantScoreQuery(queryBuilder1);
 
+        /**
+         * disMaxQuery : 分离最大化查询 只将最佳匹配的评分作为查询的评分结果返回、
+         * 参数1 tie_breaker : 该参数将其他匹配语句的评分也考虑进来, 将其他匹配语句的评分结果与tie_breaker相乘, 0-1之间的浮点数，0代表dis_max的普通逻辑, 1代表所有匹配同等重要, 合理值应该与0接近, 0.1-0.4
+         */
         DisMaxQueryBuilder queryBuilder11 = QueryBuilders.disMaxQuery();
         queryBuilder11.add(queryBuilder3);
         queryBuilder11.add(queryBuilder6);
 
-        //Positive, Negative
+        /**
+         * boostingQuery : 权重提升查询, 可以保持positive的查询条件, 给negative的查询条件降低权重, 从而达到理想的排序效果
+         * 参数1 negative_boost : 浮点型数字; 该参数可以设置negative查询条件的权重值 范围0-1
+         * 注意 : boostingQuery(Positive, Negative) positive的查询条件为第一个参数, negative为第二个参数
+         */
         BoostingQueryBuilder queryBuilder12 = QueryBuilders.boostingQuery(queryBuilder5, queryBuilder4).negativeBoost(0.5f);
 
-        FieldValueFactorFunctionBuilder fieldValueFactorFunctionBuilder = new FieldValueFactorFunctionBuilder("age.keyword");
-        FunctionScoreQueryBuilder queryBuilder13 = QueryBuilders.functionScoreQuery(queryBuilder2, fieldValueFactorFunctionBuilder);
+        /**
+         * functionScoreQuery : function_score查询 为每个主查询匹配的文档应用一个函数, 以达到改变甚至完全替换原始查询的评分
+         *
+         * weight : 为每个文档应用一个简单而不被规范化的权重提升值: 当 weight 为 2 时，最终结果为 2 * _score
+         * field_value_factor : 使用这个值来修改 _score , 如将 popularity 或 votes （受欢迎或赞）作为考虑因素。
+         * random_score : 为每个用户都使用一个不同的随机评分对结果排序, 但对某一具体用户来说，看到的顺序始终是一致的。
+         * linear_decay : 线性衰减 —— 将浮动值结合到评分 _score 中
+         * exp_decay : 指数衰减 —— 将浮动值结合到评分 _score 中
+         * gauss_decay : 高斯衰减 —— 将浮动值结合到评分 _score 中
+         * script_score : 如果需求超出以上范围时, 用自定义脚本可以完全控制评分计算，实现所需逻辑。
+         */
+        ScoreFunctionBuilder scoreFunctionBuilder = ScoreFunctionBuilders.fieldValueFactorFunction("age").modifier(FieldValueFactorFunction.Modifier.LOG1P).factor(1.0f);
+        QueryBuilder queryBuilder13 = QueryBuilders.functionScoreQuery(queryBuilder2, scoreFunctionBuilder);
+
+        /**
+         * matchPhrasePrefixQuery : 即时性带前缀的matchPhrase查询, 将查询字符串的最后一个词汇作为前缀查询
+         * 参数1 slop : 和matchPhrase查询一致
+         * 参数2 max_expansions : 控制可以与前缀匹配的词的数量, 通常设置为50
+         */
+        QueryBuilder queryBuilder14 = QueryBuilders.matchPhrasePrefixQuery("sex", "male");
 
         //验证查询语句的正确性
         ValidateQueryResponse validateQueryResponse = new ValidateQueryRequestBuilder(client, ValidateQueryAction.INSTANCE)
@@ -149,7 +225,7 @@ public class ElasticSearchTest {
         //设置排序条件
         SortBuilder sortBuilder = SortBuilders.fieldSort("age.keyword").order(SortOrder.ASC).unmappedType("long");
 
-        searchIndex(sortBuilder, aggregationBuilder, queryBuilder1, "school", "student");
+        searchIndex(sortBuilder, aggregationBuilder, queryBuilder12, "school", "student");
     }
 
     /**
@@ -336,7 +412,7 @@ public class ElasticSearchTest {
 
         SearchRequestBuilder searchRequest = client.prepareSearch(index).setTypes(type)
                 .setQuery(queryBuilder)
-                .addAggregation(aggregationBuilder)
+                //.addAggregation(aggregationBuilder)
                 //.addSort(sortBuilder)
                 .setFrom(0)                 //分页技术，设置起始位置
                 .setSize(100)               //设置（每一页）最大的显示数量，size默认是10
