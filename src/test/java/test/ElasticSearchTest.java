@@ -1,6 +1,7 @@
 package test;
 
 import org.apache.lucene.queries.mlt.MoreLikeThisQuery;
+import org.apache.lucene.search.join.ScoreMode;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
@@ -81,6 +82,8 @@ public class ElasticSearchTest {
     @SuppressWarnings("resource")
     @Test
     public void connectToES() throws Exception {
+
+        //TODO 注意 mapping属性 ignore_above 默认为256，超过256默认不进行分析，如果文本过大请重新设置为 32766 / 3 = 10922 因为UTF-8字符最多占3个字节
 
         //Settings settings = Settings.builder().put("cluster.name", "leo").build();
         client = new PreBuiltTransportClient(Settings.EMPTY)
@@ -205,6 +208,14 @@ public class ElasticSearchTest {
          */
         QueryBuilder queryBuilder14 = QueryBuilders.matchPhrasePrefixQuery("sex", "male");
 
+        /**
+         * nestedQuery : 嵌套查询, 由于嵌套对象被索引在独立隐藏的文档中, 我们无法直接查询他们, 所以需要使用嵌套查询去获取他们
+         * path : 嵌套对象名称
+         * query : 相应的查询方法
+         * scoremode : 使用的评分模式
+         */
+        QueryBuilder queryBuilder15 = QueryBuilders.nestedQuery("comment", QueryBuilders.termQuery("comments.name", "jack"), ScoreMode.None);
+
         //验证查询语句的正确性
         ValidateQueryResponse validateQueryResponse = new ValidateQueryRequestBuilder(client, ValidateQueryAction.INSTANCE)
                 .setQuery(queryBuilder9).setExplain(true).get();
@@ -225,7 +236,7 @@ public class ElasticSearchTest {
         //设置排序条件
         SortBuilder sortBuilder = SortBuilders.fieldSort("age.keyword").order(SortOrder.ASC).unmappedType("long");
 
-        searchIndex(sortBuilder, aggregationBuilder, queryBuilder12, "school", "student");
+        searchIndex(sortBuilder, aggregationBuilder, queryBuilder14, "school", "student");
     }
 
     /**
