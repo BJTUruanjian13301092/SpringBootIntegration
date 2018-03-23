@@ -1,7 +1,7 @@
 package com.example.spring_boot_test.dao;
 
 import com.example.spring_boot_test.entity.User;
-import com.example.spring_boot_test.service.UserInsertProvider;
+import com.example.spring_boot_test.service.UserProvider;
 import org.apache.ibatis.annotations.*;
 import org.springframework.stereotype.Repository;
 
@@ -18,7 +18,7 @@ public interface UserMapper {
     @Insert("insert into user(name,sex,age) values (#{name},#{sex},#{age})")
     void addUser(User user);
 
-    @InsertProvider(type= UserInsertProvider.class, method="saveAll")
+    @InsertProvider(type = UserProvider.class, method="saveAllBySQL")
     void saveAll(@Param("list") Collection<User> users);
 
     @Update("update user set age = #{age} where name = #{name}")
@@ -26,5 +26,8 @@ public interface UserMapper {
 
     @Delete("delete from user where name=#{name}")
     void deleteUserByName(String name);
+
+    @SelectProvider(type = UserProvider.class, method="selectByName")
+    List<User> selectUserByName(String name);
 
 }

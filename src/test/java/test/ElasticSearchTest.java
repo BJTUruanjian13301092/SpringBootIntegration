@@ -25,6 +25,7 @@ import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.Requests;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.lucene.search.FilteredCollector;
+import org.elasticsearch.common.lucene.search.function.CombineFunction;
 import org.elasticsearch.common.lucene.search.function.FieldValueFactorFunction;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
@@ -33,6 +34,7 @@ import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.query.functionscore.FieldValueFactorFunctionBuilder;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilder;
+import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders.*;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -85,8 +87,8 @@ public class ElasticSearchTest {
 
         //TODO 注意 mapping属性 ignore_above 默认为256，超过256默认不进行分析，如果文本过大请重新设置为 32766 / 3 = 10922 因为UTF-8字符最多占3个字节
 
-        //Settings settings = Settings.builder().put("cluster.name", "leo").build();
-        client = new PreBuiltTransportClient(Settings.EMPTY)
+        Settings settings = Settings.builder().put("cluster.name", "es-yitongliu").build();
+        client = new PreBuiltTransportClient(settings)
                 .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(HOST), PORT));
 
         System.out.println(client.toString());
@@ -198,8 +200,22 @@ public class ElasticSearchTest {
          * gauss_decay : 高斯衰减 —— 将浮动值结合到评分 _score 中
          * script_score : 如果需求超出以上范围时, 用自定义脚本可以完全控制评分计算，实现所需逻辑。
          */
-        ScoreFunctionBuilder scoreFunctionBuilder = ScoreFunctionBuilders.fieldValueFactorFunction("age").modifier(FieldValueFactorFunction.Modifier.LOG1P).factor(1.0f);
-        QueryBuilder queryBuilder13 = QueryBuilders.functionScoreQuery(queryBuilder2, scoreFunctionBuilder);
+        ScoreFunctionBuilder scoreFunctionBuilder = ScoreFunctionBuilders.fieldValueFactorFunction("age").modifier(FieldValueFactorFunction.Modifier.LOG1P).factor(1);
+        QueryBuilder queryBuilder13 = QueryBuilders.functionScoreQuery(queryBuilder2, scoreFunctionBuilder).boostMode(CombineFunction.MULTIPLY);
+
+        FunctionScoreQueryBuilder.FilterFunctionBuilder[] functions = {
+                new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+                        QueryBuilders.matchQuery("sex", "male"),
+                        ScoreFunctionBuilders.gaussDecayFunction("age",15L, 1L)),
+                new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+                        ScoreFunctionBuilders.weightFactorFunction(1.0f)
+                )
+        };
+
+        /**
+         * functionScoreQuery : 带FilterFunctionBuilder的多条件查询, 通过过滤集提升权重
+         */
+        QueryBuilder queryBuilder16 = QueryBuilders.functionScoreQuery(functions);
 
         /**
          * matchPhrasePrefixQuery : 即时性带前缀的matchPhrase查询, 将查询字符串的最后一个词汇作为前缀查询
@@ -236,7 +252,7 @@ public class ElasticSearchTest {
         //设置排序条件
         SortBuilder sortBuilder = SortBuilders.fieldSort("age.keyword").order(SortOrder.ASC).unmappedType("long");
 
-        searchIndex(sortBuilder, aggregationBuilder, queryBuilder14, "school", "student");
+        //searchIndex(sortBuilder, aggregationBuilder, queryBuilder2, "school", "student");
     }
 
     /**
@@ -254,7 +270,7 @@ public class ElasticSearchTest {
                             .field("book_name", "ElasticSearch入门")
                             .field("author", "Kobe")
                             .field("publish_time", "2017-09-09")
-                            .field("describe", "This book is not a good one so do not buy it")
+                            .field("describe", "这是一本非常好的书")
                             .field("price", a)
                             .endObject())
                     .get();
@@ -292,10 +308,11 @@ public class ElasticSearchTest {
      */
     public void createMapping() throws Exception {
         //先创建索引
-        CreateIndexRequest request = new CreateIndexRequest("mymapping");
+        CreateIndexRequest request = new CreateIndexRequest("library");
         client.admin().indices().create(request).actionGet();
         //创建mapping
-        PutMappingRequest mapping = Requests.putMappingRequest("mymapping").type("mymapping").source(getMapping("context", "ik_max_word"));
+        PutMappingRequest mapping = Requests.putMappingRequest("library").type("book")
+                .source(getMapping("describe", "ik_max_word"));
         client.admin().indices().putMapping(mapping).actionGet();
 
     }
@@ -306,7 +323,8 @@ public class ElasticSearchTest {
      */
     public void alterMapping() throws Exception {
         //创建mapping
-        PutMappingRequest mapping = Requests.putMappingRequest("library").type("book").source(getMapping("describe", "true"));
+        PutMappingRequest mapping = Requests.putMappingRequest("library").type("book")
+                .source(getMapping("describe", "true"));
         client.admin().indices().putMapping(mapping).actionGet();
 
     }
@@ -335,7 +353,7 @@ public class ElasticSearchTest {
                 .startObject("properties")
                 .startObject(indexField)
                 .field("type","text")
-                .field("fielddata", var)
+                .field("analyzer", var)
                 .endObject()
                 .endObject()
                 .endObject();

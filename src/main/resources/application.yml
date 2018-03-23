@@ -1,7 +1,7 @@
 spring:
     datasource:
         name: ebus
-        url: jdbc:mysql://localhost:3306/test?autoReconnect=true&useSSL=false
+        url: jdbc:mysql://localhost:3306/test?autoReconnect=true&useSSL=false&allowMultiQueries=true
         username: root
         password: haha123
         # 使用druid数据源
