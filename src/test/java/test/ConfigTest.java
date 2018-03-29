@@ -1,7 +1,9 @@
 package test;
 
 import com.example.spring_boot_test.SpringBootTestApplication;
+import com.example.spring_boot_test.entity.TestAnnotationEntity;
 import com.example.spring_boot_test.service.LoadConfigService;
+import com.example.spring_boot_test.service.TestAnnotationService;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,9 +17,17 @@ public class ConfigTest {
     @Autowired
     LoadConfigService loadConfigService;
 
+    @Autowired
+    TestAnnotationService testAnnotationService;
+
     @Test
     public void testConfig(){
         loadConfigService.loadConfig();
         loadConfigService.loadConfig2();
+    }
+
+    @Test
+    public void testAnnotation(){
+        testAnnotationService.getInfo(TestAnnotationEntity.class);
     }
 }
