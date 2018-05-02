@@ -1,6 +1,6 @@
-package com.example.spring_boot_test.service;
+package com.example.spring_boot_test.data.provider;
 
-import com.example.spring_boot_test.entity.User;
+import com.example.spring_boot_test.data.entity.User;
 import org.apache.ibatis.jdbc.SQL;
 
 import java.text.MessageFormat;

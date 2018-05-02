@@ -1,4 +1,4 @@
-package com.example.spring_boot_test.entity;
+package com.example.spring_boot_test.data.entity;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.PropertySource;

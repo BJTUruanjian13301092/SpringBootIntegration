@@ -1,6 +1,6 @@
 package com.example.spring_boot_test.service;
 
-import com.example.spring_boot_test.entity.TestConfigUser;
+import com.example.spring_boot_test.data.entity.TestConfigUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;

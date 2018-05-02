@@ -1,12 +1,11 @@
 package test;
 
-import com.example.spring_boot_test.entity.User;
+import com.example.spring_boot_test.data.entity.User;
 import com.example.spring_boot_test.utils.GsonUtil;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class GsonTest {

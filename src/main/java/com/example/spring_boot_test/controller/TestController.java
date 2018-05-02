@@ -1,8 +1,8 @@
 package com.example.spring_boot_test.controller;
 
-import com.example.spring_boot_test.dao.TestInterface;
-import com.example.spring_boot_test.dao.UserMapper;
-import com.example.spring_boot_test.entity.User;
+import com.example.spring_boot_test.data.dao.TestInterface;
+import com.example.spring_boot_test.data.dao.UserMapper;
+import com.example.spring_boot_test.data.entity.User;
 import com.example.spring_boot_test.service.LoadConfigService;
 import com.example.spring_boot_test.service.RedisTestService;
 import com.example.spring_boot_test.service.StandfordNLPService;
@@ -104,21 +104,18 @@ public class TestController {
     //测试Redis
     @RequestMapping("teststringredis")
     public void testStringRedisTemplate(){
-
         redisTestService.testStringRedisTemplate();
     }
 
     //测试Interface
     @RequestMapping("testInterface")
     public void testInterface(){
-
         testInterface.testMyInterface();
     }
 
     //测试StandFordNlp
     @RequestMapping("testnlp")
     public void testNlp(){
-
         standfordNLPService.testMyNlp();
     }
 

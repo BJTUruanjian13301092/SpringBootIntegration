@@ -1,7 +1,7 @@
 package test;
 
 import com.example.spring_boot_test.SpringBootTestApplication;
-import com.example.spring_boot_test.entity.TestAnnotationEntity;
+import com.example.spring_boot_test.data.entity.TestAnnotationEntity;
 import com.example.spring_boot_test.service.LoadConfigService;
 import com.example.spring_boot_test.service.TestAnnotationService;
 import org.junit.Test;

@@ -1,7 +1,7 @@
-package com.example.spring_boot_test.dao;
+package com.example.spring_boot_test.data.dao;
 
-import com.example.spring_boot_test.entity.User;
-import com.example.spring_boot_test.service.UserProvider;
+import com.example.spring_boot_test.data.entity.User;
+import com.example.spring_boot_test.data.provider.UserProvider;
 import org.apache.ibatis.annotations.*;
 import org.springframework.stereotype.Repository;
 
