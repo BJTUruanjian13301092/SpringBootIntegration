@@ -30,11 +30,11 @@ public interface UserMapper {
     @SelectProvider(type = UserProvider.class, method="selectByName")
     List<User> selectUserByName(String name);
 
-    @Select( "<script>"
+    @Select(  "<script>"
             + "Select * from user"
             + "<when test='sex!=null'>"
             + "where sex = #{sex}"
             + "</when>"
-            + "</script>" )
+            + "</script>")
     List<User> findUsefulUser(@Param("sex") String sex);
 }

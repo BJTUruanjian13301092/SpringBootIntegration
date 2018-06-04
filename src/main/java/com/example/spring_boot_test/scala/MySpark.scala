@@ -16,9 +16,9 @@ object MySpark {
   def main(args: Array[String]): Unit = {
     LogManager.resetConfiguration()
     PropertyConfigurator.configure("config/log4j.properties")
-    sparkNormalTest
+    //sparkNormalTest
     //sparkStreamTest
-    //sparkSQLTest
+    sparkSQLTest
     //sparkGraphXTest
   }
 
