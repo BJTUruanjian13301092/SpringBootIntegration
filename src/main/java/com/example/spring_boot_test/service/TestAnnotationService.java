@@ -3,6 +3,7 @@ package com.example.spring_boot_test.service;
 import com.example.spring_boot_test.annotation.MyAnnotation;
 import org.springframework.stereotype.Service;
 
+import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 
 @Service

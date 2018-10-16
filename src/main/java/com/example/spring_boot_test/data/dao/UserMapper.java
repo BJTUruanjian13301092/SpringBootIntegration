@@ -15,6 +15,9 @@ public interface UserMapper {
     @Select("select * from user")
     List<User> findAllUser();
 
+    @Select("select * from user where name = #{name}")
+    List<User> findUsersByName(String name);
+
     @Insert("insert into user(name,sex,age) values (#{name},#{sex},#{age})")
     void addUser(User user);
 

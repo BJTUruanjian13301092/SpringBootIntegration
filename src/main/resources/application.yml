@@ -12,3 +12,10 @@ mybatis:
     type-aliases-package: com.lty.ebus.model
     #如果不是在Mapper里直接写sql语句，而是在xml里写，需要指定XML文件路径
     #mapper-locations: classpath:mapping/*.xml
+
+logging:
+  level:
+    root: info
+    com:
+      example:
+        spring_boot_test: trace

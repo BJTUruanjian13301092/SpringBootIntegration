@@ -59,6 +59,11 @@ public class TestController {
         return userMapper.findAllUser();
     }
 
+    @RequestMapping("finduserbyname")
+    public List<User> findUserByName(String name){
+        return userMapper.findUsersByName(name);
+    }
+
     //批量插入用户
     @RequestMapping("saveusers")
     public void saveUsers(){
