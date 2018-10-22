@@ -7,4 +7,12 @@ public class TestAnnotationEntity {
     //fruitType = "Peach"
     @MyAnnotation()
     public String fruitType;
+
+    public String getFruitType() {
+        return fruitType;
+    }
+
+    public void setFruitType(String fruitType) {
+        this.fruitType = fruitType;
+    }
 }
